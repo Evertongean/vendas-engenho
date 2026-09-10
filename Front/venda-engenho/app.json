@@ -8,7 +8,11 @@
     "scheme": "vendaengenho",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Permitir que o $(PRODUCT_NAME) use reconhecimento de fala para venda por voz.",
+        "NSMicrophoneUsageDescription": "Permitir que o $(PRODUCT_NAME) use o microfone para venda por voz."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +21,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false,
+      "package": "com.everton5gem.vendaengenho"
     },
     "web": {
       "output": "static",
@@ -32,11 +40,27 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Permitir que o $(PRODUCT_NAME) use o microfone para venda por voz.",
+          "speechRecognitionPermission": "Permitir que o $(PRODUCT_NAME) use reconhecimento de fala para venda por voz.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d267e4fb-7c38-41c9-8173-5f0db59b7816"
+      }
     }
   }
 }
