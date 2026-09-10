@@ -44,10 +44,10 @@ Produtos cadastrados no código com preços padrão:
 | Produto | Preço padrão |
 | --- | ---: |
 | Mel | R$ 12,00 |
-| Rapadura | R$ 8,00 |
-| Rapadura Temperada | R$ 10,00 |
-| Batida | R$ 5,00 |
-| Caldo de Cana | R$ 7,00 |
+| Rapadura | R$ 12,00 |
+| Rapadura Temperada | R$ 15,00 |
+| Batida | R$ 20,00 |
+| Caldo de Cana | R$ 5,00 |
 
 Os preços podem ser alterados pela tela de configurações do aplicativo.
 
@@ -96,7 +96,6 @@ O parser de voz reconhece os produtos cadastrados, alguns aliases e números fal
 
 ```text
 .
-├── Back/
 ├── Front/
 │   └── venda-engenho/
 │       ├── android/
