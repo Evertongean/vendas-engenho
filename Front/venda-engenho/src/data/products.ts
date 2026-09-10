@@ -9,22 +9,22 @@ export const DEFAULT_PRODUCTS: Product[] = [
   {
     id: "2",
     name: "Rapadura",
-    unitPrice: 8,
+    unitPrice: 12,
   },
   {
     id: "3",
     name: "Rapadura Temperada",
-    unitPrice: 10,
+    unitPrice: 15,
   },
   {
     id: "4",
     name: "Batida",
-    unitPrice: 5,
+    unitPrice: 20,
   },
   {
     id: "5",
     name: "Caldo de Cana",
-    unitPrice: 7,
+    unitPrice: 5,
   },
 ];
 
