@@ -1,23 +1,29 @@
 {
   "expo": {
-    "name": "venda-engenho",
+    "name": "Venda do Engenho",
     "slug": "venda-engenho",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo-venda-engenho.png",
     "scheme": "vendaengenho",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/logo-venda-engenho.png",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Permitir que o $(PRODUCT_NAME) use reconhecimento de fala para venda por voz.",
+        "NSMicrophoneUsageDescription": "Permitir que o $(PRODUCT_NAME) use o microfone para venda por voz."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FBF8ED",
+        "foregroundImage": "./assets/images/logo-venda-engenho.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false,
+      "package": "com.everton5gem.vendaengenho"
     },
     "web": {
       "output": "static",
@@ -28,15 +34,32 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#FBF8ED",
+          "image": "./assets/images/logo-venda-engenho.png",
+          "imageWidth": 260,
+          "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Permitir que o $(PRODUCT_NAME) use o microfone para venda por voz.",
+          "speechRecognitionPermission": "Permitir que o $(PRODUCT_NAME) use reconhecimento de fala para venda por voz.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d267e4fb-7c38-41c9-8173-5f0db59b7816"
+      }
     }
   }
 }
