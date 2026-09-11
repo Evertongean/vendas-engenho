@@ -10,9 +10,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
+import QRCode from "react-native-qrcode-svg";
 
 import { useSale } from "@/context/SaleContext";
+import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/hooks/use-theme";
 import type { PaymentMethod } from "@/types/sale";
 import {
@@ -21,16 +24,19 @@ import {
   parseCurrencyInput,
   roundCurrency,
 } from "@/utils/money";
+import { generatePixPayload } from "@/utils/pix";
 
 type PaymentStep = "selection" | PaymentMethod;
 
 export default function PagamentoScreen() {
   const router = useRouter();
   const { items, total, clearSale, createSaleRecord, saveSale } = useSale();
+  const { pixSettings } = useSettings();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [paymentStep, setPaymentStep] = useState<PaymentStep>("selection");
   const [receivedValue, setReceivedValue] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState("");
   const [saleCompleted, setSaleCompleted] = useState(false);
   const [isSavingSale, setIsSavingSale] = useState(false);
 
@@ -40,6 +46,37 @@ export default function PagamentoScreen() {
   );
   const change = Math.max(roundCurrency(received - total), 0);
   const hasEnoughCash = total > 0 && received >= total;
+  const pixConfigurationMessage = useMemo(() => {
+    if (!pixSettings.pixKey.trim()) {
+      return "Configure sua chave PIX em Configuracoes.";
+    }
+
+    if (
+      !pixSettings.pixMerchantName.trim() ||
+      !pixSettings.pixMerchantCity.trim()
+    ) {
+      return "Complete nome e cidade do PIX em Configuracoes.";
+    }
+
+    return "";
+  }, [pixSettings]);
+  const pixPayload = useMemo(() => {
+    if (paymentStep !== "pix" || pixConfigurationMessage) {
+      return "";
+    }
+
+    try {
+      return generatePixPayload({
+        pixKey: pixSettings.pixKey,
+        merchantName: pixSettings.pixMerchantName,
+        merchantCity: pixSettings.pixMerchantCity,
+        amount: total,
+      });
+    } catch {
+      return "";
+    }
+  }, [paymentStep, pixConfigurationMessage, pixSettings, total]);
+  const canConfirmPix = Boolean(pixPayload) && !isSavingSale;
 
   useEffect(() => {
     if (saleCompleted || items.length > 0) {
@@ -58,6 +95,18 @@ export default function PagamentoScreen() {
       { cancelable: false }
     );
   }, [items.length, router, saleCompleted]);
+
+  useEffect(() => {
+    if (!copyFeedback) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setCopyFeedback("");
+    }, 2400);
+
+    return () => clearTimeout(timeout);
+  }, [copyFeedback]);
 
   async function finishConfirmedSale(paymentMethod: PaymentMethod) {
     if (isSavingSale) {
@@ -100,6 +149,19 @@ export default function PagamentoScreen() {
 
   function goBack() {
     router.back();
+  }
+
+  async function copyPixPayload() {
+    if (!pixPayload) {
+      return;
+    }
+
+    try {
+      await Clipboard.setStringAsync(pixPayload);
+      setCopyFeedback("PIX copiado");
+    } catch {
+      setCopyFeedback("Nao foi possivel copiar o PIX");
+    }
   }
 
   function renderPaymentSelection() {
@@ -178,20 +240,58 @@ export default function PagamentoScreen() {
   function renderPixPayment() {
     return (
       <>
-        <Text style={styles.subtitle}>Pagamento via PIX</Text>
+        <Text style={styles.subtitle}>Pagamento PIX</Text>
 
         <View style={styles.pixInfoContainer}>
           <Text style={styles.pixLabel}>Total</Text>
           <Text style={styles.pixTotal}>{formatCurrency(total)}</Text>
-          <Text style={styles.pixHelp}>
-            Confirme apos receber o PIX do cliente.
-          </Text>
+
+          {pixPayload ? (
+            <>
+              <View style={styles.qrCodeContainer}>
+                <QRCode
+                  backgroundColor="#ffffff"
+                  color="#000000"
+                  quietZone={12}
+                  size={210}
+                  value={pixPayload}
+                />
+              </View>
+
+              <Text style={styles.pixHelp}>
+                Escaneie para pagar {formatCurrency(total)}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.copyPixButton}
+                onPress={copyPixPayload}
+              >
+                <Text style={styles.copyPixButtonText}>
+                  COPIAR PIX COPIA E COLA
+                </Text>
+              </TouchableOpacity>
+
+              {copyFeedback ? (
+                <Text style={styles.copyFeedback}>{copyFeedback}</Text>
+              ) : null}
+            </>
+          ) : (
+            <View style={styles.pixMissingContainer}>
+              <Text style={styles.pixMissingText}>
+                {pixConfigurationMessage ||
+                  "Nao foi possivel gerar o QR Code PIX."}
+              </Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
-          style={[styles.confirmButton, isSavingSale && styles.disabledButton]}
+          style={[
+            styles.confirmButton,
+            !canConfirmPix && styles.disabledButton,
+          ]}
           onPress={() => finishConfirmedSale("pix")}
-          disabled={isSavingSale}
+          disabled={!canConfirmPix}
         >
           <Text style={styles.confirmButtonText}>
             {isSavingSale ? "SALVANDO..." : "PAGAMENTO RECEBIDO"}
@@ -396,11 +496,60 @@ function createStyles(colors: ReturnType<typeof useTheme>) {
       marginTop: 4,
     },
 
+    qrCodeContainer: {
+      alignSelf: "center",
+      backgroundColor: "#ffffff",
+      borderRadius: 8,
+      marginTop: 20,
+      padding: 12,
+    },
+
     pixHelp: {
       fontSize: 16,
       color: colors.textSecondary,
       lineHeight: 22,
       marginTop: 16,
+      textAlign: "center",
+    },
+
+    copyPixButton: {
+      minHeight: 50,
+      borderRadius: 8,
+      backgroundColor: colors.secondaryButton,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 16,
+      paddingHorizontal: 12,
+    },
+
+    copyPixButtonText: {
+      color: colors.secondaryButtonText,
+      fontSize: 14,
+      fontWeight: "bold",
+      textAlign: "center",
+    },
+
+    copyFeedback: {
+      color: colors.primary,
+      fontSize: 15,
+      fontWeight: "800",
+      marginTop: 10,
+      textAlign: "center",
+    },
+
+    pixMissingContainer: {
+      borderRadius: 8,
+      backgroundColor: colors.backgroundElement,
+      marginTop: 18,
+      padding: 14,
+    },
+
+    pixMissingText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: "700",
+      lineHeight: 21,
+      textAlign: "center",
     },
 
     confirmButton: {

@@ -2,7 +2,7 @@
   <h1>Venda do Engenho</h1>
 
   <p>
-    Sistema desenvolvido para facilitar o registro e acompanhamento das vendas dos produtos do engenho, com foco em rapidez, simplicidade e uso durante o atendimento.
+    Sistema desenvolvido para facilitar o registro, pagamento e acompanhamento das vendas dos produtos do engenho, com foco em rapidez, simplicidade e uso durante o atendimento.
   </p>
 
   <p>
@@ -17,7 +17,7 @@
 
 O **Venda do Engenho** é um aplicativo mobile simples para apoiar o controle de vendas de produtos de um engenho. A proposta é permitir que o vendedor registre rapidamente os itens vendidos, acompanhe o total da venda, finalize o pagamento e consulte o histórico semanal das vendas realizadas.
 
-O projeto foi desenvolvido com **Expo**, **React Native** e **TypeScript**, utilizando persistência local para manter configurações e registros de vendas no próprio dispositivo.
+O projeto foi desenvolvido com **Expo**, **React Native** e **TypeScript**, utilizando persistência local para manter configurações, produtos, dados PIX e registros de vendas no próprio dispositivo.
 
 ## ✨ Funcionalidades
 
@@ -28,6 +28,9 @@ O projeto foi desenvolvido com **Expo**, **React Native** e **TypeScript**, util
 - Finalização de venda com escolha entre pagamento em **dinheiro** ou **PIX**.
 - Cálculo de troco para pagamentos em dinheiro.
 - Validação de valor recebido antes de confirmar venda em dinheiro.
+- Pagamento PIX com **QR Code gerado localmente** no aplicativo.
+- PIX Copia e Cola com botão para copiar o payload.
+- Configuração local de chave PIX, nome do recebedor e cidade.
 - Histórico de vendas salvo localmente.
 - Filtro do histórico por dia da semana.
 - Controle semanal das vendas, com resumo da semana atual.
@@ -36,6 +39,8 @@ O projeto foi desenvolvido com **Expo**, **React Native** e **TypeScript**, util
 - Alternância entre tema claro e tema escuro.
 - Interface adaptada para uso em celular.
 - Sistema de venda por voz com reconhecimento de produtos e quantidades antes de adicionar os itens à venda.
+- Ícone e splash screen com a identidade visual oficial do aplicativo.
+- Perfil de build `preview` para gerar APK Android standalone, sem depender do Metro.
 
 ## 🛒 Produtos
 
@@ -51,11 +56,47 @@ Produtos cadastrados no código com preços padrão:
 
 Os preços podem ser alterados pela tela de configurações do aplicativo.
 
+## 💳 Pagamento PIX
+
+O aplicativo possui pagamento PIX com QR Code gerado localmente, sem backend, API bancária ou serviço externo.
+
+Na tela de pagamento, ao selecionar **PIX**, o app exibe:
+
+- valor total da venda;
+- QR Code PIX;
+- orientação para escanear o código;
+- botão **COPIAR PIX COPIA E COLA**;
+- botão **PAGAMENTO RECEBIDO** para confirmação manual.
+
+As configurações PIX ficam salvas localmente no dispositivo:
+
+- Chave PIX;
+- Nome do recebedor;
+- Cidade.
+
+O payload PIX é gerado em `src/utils/pix.ts`, seguindo a estrutura BR Code/TLV e cálculo CRC16 local. O QR Code e o Pix Copia e Cola usam o mesmo payload.
+
 ## 🎤 Sistema de voz
 
 O projeto possui uma integração de venda por voz usando `expo-speech-recognition`. Na tela de venda, o usuário pode iniciar o reconhecimento, falar produtos e quantidades em português e revisar o que foi entendido em um modal antes de adicionar os itens ao carrinho.
 
-O parser de voz reconhece os produtos cadastrados, alguns aliases e números falados ou digitados. No Android, o próprio código informa que esse recurso depende de uma **Development Build** para funcionar corretamente.
+O parser de voz reconhece os produtos cadastrados, alguns aliases e números falados ou digitados. No Android, esse recurso depende de um APK gerado com os módulos nativos do projeto, como a **Development Build** ou o APK **preview** standalone.
+
+## 🎨 Identidade visual
+
+O projeto utiliza a logo oficial em:
+
+- ícone do aplicativo;
+- adaptive icon do Android;
+- splash screen nativa.
+
+A imagem utilizada fica em:
+
+```text
+Front/venda-engenho/assets/images/logo-venda-engenho.png
+```
+
+O nome configurado para instalação no Android é **Venda do Engenho**.
 
 ## 🖼️ Demonstração
 
@@ -67,6 +108,10 @@ O parser de voz reconhece os produtos cadastrados, alguns aliases e números fal
 
 <!-- Adicione aqui uma imagem da tela de pagamento -->
 
+### Pagamento PIX
+
+<!-- Adicione aqui uma imagem do QR Code PIX -->
+
 ### Histórico
 
 <!-- Adicione aqui uma imagem da tela de histórico -->
@@ -74,6 +119,10 @@ O parser de voz reconhece os produtos cadastrados, alguns aliases e números fal
 ### Configurações
 
 <!-- Adicione aqui uma imagem da tela de configurações -->
+
+### Splash screen
+
+<!-- Adicione aqui uma imagem da splash screen com a logo -->
 
 ## 🚀 Tecnologias utilizadas
 
@@ -84,7 +133,12 @@ O parser de voz reconhece os produtos cadastrados, alguns aliases e números fal
 - **TypeScript**
 - **AsyncStorage** para persistência local
 - **Expo Speech Recognition** para reconhecimento de voz
+- **Expo Clipboard** para copiar o Pix Copia e Cola
+- **React Native QRCode SVG** para exibir QR Code PIX
+- **React Native SVG** como base do QR Code
 - **Expo Dev Client** para execução com módulos nativos
+- **Expo Splash Screen** para a splash screen nativa
+- **EAS Build** para geração de APK Android
 - **React Native Reanimated**
 - **React Native Gesture Handler**
 - **React Native Safe Area Context**
@@ -102,6 +156,7 @@ O parser de voz reconhece os produtos cadastrados, alguns aliases e números fal
 │       ├── assets/
 │       │   ├── expo.icon/
 │       │   └── images/
+│       │       └── logo-venda-engenho.png
 │       ├── scripts/
 │       ├── src/
 │       │   ├── app/
@@ -119,6 +174,9 @@ O parser de voz reconhece os produtos cadastrados, alguns aliases e números fal
 │       │   ├── hooks/
 │       │   ├── types/
 │       │   └── utils/
+│       │       ├── money.ts
+│       │       ├── pix.ts
+│       │       └── week.ts
 │       ├── app.json
 │       ├── eas.json
 │       ├── package.json
@@ -157,7 +215,11 @@ npm run lint
 
 ## 📱 Executando no Android
 
-Para executar no Android, é necessário ter o ambiente Android configurado, com emulador ou dispositivo físico conectado.
+Existem dois fluxos principais para Android: desenvolvimento e APK standalone.
+
+### Desenvolvimento com Development Build
+
+Use este fluxo enquanto estiver programando, testando alterações e usando Metro.
 
 Dentro da pasta `Front/venda-engenho`, execute:
 
@@ -165,13 +227,41 @@ Dentro da pasta `Front/venda-engenho`, execute:
 npm run android
 ```
 
-Esse comando usa `expo run:android`, gerando e executando o app Android com suporte a módulos nativos. Para continuar o desenvolvimento depois da build instalada, inicie o Metro/Expo com:
+Esse comando usa `expo run:android`, gerando e executando o app Android com suporte a módulos nativos.
+
+Depois da build instalada, inicie o Metro com:
 
 ```bash
-npm start
+npx expo start --dev-client
 ```
 
-O recurso de voz no Android depende de uma **Development Build**, pois utiliza integração nativa de reconhecimento de fala.
+### APK standalone para uso normal
+
+Use este fluxo para gerar um APK instalável que abre sozinho no celular, sem computador ligado, sem Metro e sem QR Code do Expo.
+
+```bash
+npx eas-cli@latest build --platform android --profile preview
+```
+
+O perfil `preview` em `eas.json` está configurado para gerar APK:
+
+```json
+{
+  "distribution": "internal",
+  "android": {
+    "buildType": "apk"
+  }
+}
+```
+
+Depois de instalar o APK preview, basta tocar no ícone **Venda do Engenho** para usar o aplicativo normalmente.
+
+### Diferença entre builds
+
+| Build | Uso | Precisa de Metro? |
+| --- | --- | --- |
+| `development` | Programar e testar com Development Build | Sim |
+| `preview` | Instalar e usar o app como APK standalone | Não |
 
 ## 🔮 Próximas melhorias
 

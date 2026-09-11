@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,7 +14,7 @@ import {
 
 import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/hooks/use-theme";
-import type { ProductPriceMap } from "@/types/settings";
+import type { PixSettings, ProductPriceMap } from "@/types/settings";
 import {
   formatCurrencyInput,
   parseCurrencyInputStrict,
@@ -24,35 +24,55 @@ type PriceErrors = Record<string, string>;
 
 export default function ConfiguracoesScreen() {
   const {
+    pixSettings,
     products,
     themeMode,
     settingsLoading,
+    savePixSettings,
     saveProductPrices,
     setThemeMode,
   } = useSettings();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
+  const [draftPriceOverrides, setDraftPriceOverrides] = useState<
+    Record<string, string>
+  >({});
+  const [draftPixOverrides, setDraftPixOverrides] = useState<
+    Partial<PixSettings>
+  >({});
   const [priceErrors, setPriceErrors] = useState<PriceErrors>({});
+  const [pixStatusMessage, setPixStatusMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [isSavingPixSettings, setIsSavingPixSettings] = useState(false);
   const [isSavingPrices, setIsSavingPrices] = useState(false);
   const [isSavingTheme, setIsSavingTheme] = useState(false);
 
-  useEffect(() => {
-    const nextDraftPrices = products.reduce<Record<string, string>>(
-      (prices, product) => {
+  const savedDraftPrices = useMemo(
+    () =>
+      products.reduce<Record<string, string>>((prices, product) => {
         prices[product.id] = formatCurrencyInput(product.unitPrice);
         return prices;
-      },
-      {}
-    );
+      }, {}),
+    [products]
+  );
+  const draftPrices = useMemo(
+    () => ({
+      ...savedDraftPrices,
+      ...draftPriceOverrides,
+    }),
+    [draftPriceOverrides, savedDraftPrices]
+  );
 
-    setDraftPrices(nextDraftPrices);
-    setPriceErrors({});
-  }, [products]);
+  const draftPixSettings = useMemo(
+    () => ({
+      ...pixSettings,
+      ...draftPixOverrides,
+    }),
+    [draftPixOverrides, pixSettings]
+  );
 
   function updateDraftPrice(id: string, value: string) {
-    setDraftPrices((current) => ({
+    setDraftPriceOverrides((current) => ({
       ...current,
       [id]: value,
     }));
@@ -71,7 +91,7 @@ export default function ConfiguracoesScreen() {
       return;
     }
 
-    setDraftPrices((current) => ({
+    setDraftPriceOverrides((current) => ({
       ...current,
       [id]: formatCurrencyInput(parsedPrice),
     }));
@@ -102,12 +122,7 @@ export default function ConfiguracoesScreen() {
     try {
       setIsSavingPrices(true);
       await saveProductPrices(nextPrices);
-      setDraftPrices(
-        products.reduce<Record<string, string>>((prices, product) => {
-          prices[product.id] = formatCurrencyInput(nextPrices[product.id]);
-          return prices;
-        }, {})
-      );
+      setDraftPriceOverrides({});
       setStatusMessage("Precos atualizados com sucesso.");
     } catch {
       Alert.alert(
@@ -116,6 +131,30 @@ export default function ConfiguracoesScreen() {
       );
     } finally {
       setIsSavingPrices(false);
+    }
+  }
+
+  function updateDraftPixSetting(field: keyof PixSettings, value: string) {
+    setDraftPixOverrides((current) => ({
+      ...current,
+      [field]: value,
+    }));
+    setPixStatusMessage("");
+  }
+
+  async function savePixConfiguration() {
+    try {
+      setIsSavingPixSettings(true);
+      await savePixSettings(draftPixSettings);
+      setDraftPixOverrides({});
+      setPixStatusMessage("Configuracao PIX salva com sucesso.");
+    } catch {
+      Alert.alert(
+        "Erro ao salvar",
+        "Nao foi possivel salvar a configuracao PIX. Tente novamente."
+      );
+    } finally {
+      setIsSavingPixSettings(false);
     }
   }
 
@@ -212,6 +251,65 @@ export default function ConfiguracoesScreen() {
 
         <View style={styles.sectionSpacer} />
 
+        <Text style={styles.sectionTitle}>CONFIGURACAO PIX</Text>
+
+        <View style={styles.pixSettingsContainer}>
+          <Text style={styles.inputLabel}>Chave PIX</Text>
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="default"
+            onChangeText={(value) => updateDraftPixSetting("pixKey", value)}
+            placeholder="CPF, CNPJ, telefone, email ou chave aleatoria"
+            placeholderTextColor={colors.textSecondary}
+            style={styles.textInput}
+            value={draftPixSettings.pixKey}
+          />
+
+          <Text style={styles.inputLabel}>Nome do recebedor</Text>
+          <TextInput
+            autoCapitalize="words"
+            onChangeText={(value) =>
+              updateDraftPixSetting("pixMerchantName", value)
+            }
+            placeholder="Nome que aparecera no PIX"
+            placeholderTextColor={colors.textSecondary}
+            style={styles.textInput}
+            value={draftPixSettings.pixMerchantName}
+          />
+
+          <Text style={styles.inputLabel}>Cidade</Text>
+          <TextInput
+            autoCapitalize="words"
+            onChangeText={(value) =>
+              updateDraftPixSetting("pixMerchantCity", value)
+            }
+            placeholder="Cidade do recebedor"
+            placeholderTextColor={colors.textSecondary}
+            style={styles.textInput}
+            value={draftPixSettings.pixMerchantCity}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            isSavingPixSettings && styles.disabledButton,
+          ]}
+          onPress={savePixConfiguration}
+          disabled={isSavingPixSettings}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSavingPixSettings ? "SALVANDO..." : "SALVAR PIX"}
+          </Text>
+        </TouchableOpacity>
+
+        {pixStatusMessage ? (
+          <Text style={styles.statusText}>{pixStatusMessage}</Text>
+        ) : null}
+
+        <View style={styles.sectionSpacer} />
+
         <Text style={styles.sectionTitle}>APARENCIA</Text>
 
         <View style={styles.themeRow}>
@@ -295,6 +393,15 @@ function createStyles(colors: ReturnType<typeof useTheme>) {
       gap: 10,
     },
 
+    pixSettingsContainer: {
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+      padding: 14,
+      gap: 8,
+    },
+
     productRow: {
       minHeight: 72,
       borderRadius: 8,
@@ -354,6 +461,26 @@ function createStyles(colors: ReturnType<typeof useTheme>) {
       fontSize: 17,
       fontWeight: "700",
       textAlign: "right",
+    },
+
+    inputLabel: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: "800",
+      marginTop: 4,
+    },
+
+    textInput: {
+      minHeight: 48,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.inputBackground,
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
     },
 
     saveButton: {

@@ -12,15 +12,17 @@ import {
 import { Colors } from "@/constants/theme";
 import { DEFAULT_PRODUCTS } from "@/data/products";
 import type { Product } from "@/types/sale";
-import type { AppTheme, ProductPriceMap } from "@/types/settings";
+import type { AppTheme, PixSettings, ProductPriceMap } from "@/types/settings";
 import { roundCurrency } from "@/utils/money";
 
 interface SettingsContextValue {
   products: Product[];
+  pixSettings: PixSettings;
   themeMode: AppTheme;
   colors: (typeof Colors)[AppTheme];
   settingsLoading: boolean;
   saveProductPrices: (prices: ProductPriceMap) => Promise<void>;
+  savePixSettings: (settings: PixSettings) => Promise<void>;
   updateProductPrice: (id: string, unitPrice: number) => Promise<void>;
   setThemeMode: (theme: AppTheme) => Promise<void>;
   loadSettings: () => Promise<void>;
@@ -28,6 +30,12 @@ interface SettingsContextValue {
 
 const PRODUCT_STORAGE_KEY = "@venda-engenho:products";
 const THEME_STORAGE_KEY = "@venda-engenho:theme";
+const PIX_STORAGE_KEY = "@venda-engenho:pix-settings";
+const DEFAULT_PIX_SETTINGS: PixSettings = {
+  pixKey: "",
+  pixMerchantName: "",
+  pixMerchantCity: "",
+};
 const SettingsContext = createContext<SettingsContextValue | undefined>(
   undefined
 );
@@ -96,6 +104,44 @@ async function readStoredPrices() {
   return readPricesFromParsedValue(JSON.parse(storedProducts));
 }
 
+function normalizePixSettings(settings: PixSettings): PixSettings {
+  return {
+    pixKey: settings.pixKey.trim(),
+    pixMerchantName: settings.pixMerchantName.trim(),
+    pixMerchantCity: settings.pixMerchantCity.trim(),
+  };
+}
+
+function readPixSettingsFromParsedValue(value: unknown): PixSettings {
+  if (!value || typeof value !== "object") {
+    return DEFAULT_PIX_SETTINGS;
+  }
+
+  const settings = value as Partial<Record<keyof PixSettings, unknown>>;
+
+  return normalizePixSettings({
+    pixKey: typeof settings.pixKey === "string" ? settings.pixKey : "",
+    pixMerchantName:
+      typeof settings.pixMerchantName === "string"
+        ? settings.pixMerchantName
+        : "",
+    pixMerchantCity:
+      typeof settings.pixMerchantCity === "string"
+        ? settings.pixMerchantCity
+        : "",
+  });
+}
+
+async function readStoredPixSettings() {
+  const storedPixSettings = await AsyncStorage.getItem(PIX_STORAGE_KEY);
+
+  if (!storedPixSettings) {
+    return DEFAULT_PIX_SETTINGS;
+  }
+
+  return readPixSettingsFromParsedValue(JSON.parse(storedPixSettings));
+}
+
 function normalizePriceMap(prices: ProductPriceMap) {
   return DEFAULT_PRODUCTS.reduce<ProductPriceMap>((normalizedPrices, product) => {
     const unitPrice = normalizePrice(prices[product.id]);
@@ -111,6 +157,8 @@ function normalizePriceMap(prices: ProductPriceMap) {
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS);
+  const [pixSettings, setPixSettings] =
+    useState<PixSettings>(DEFAULT_PIX_SETTINGS);
   const [themeMode, setThemeModeState] = useState<AppTheme>("light");
   const [settingsLoading, setSettingsLoading] = useState(true);
 
@@ -118,12 +166,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     try {
       setSettingsLoading(true);
 
-      const [storedPrices, storedTheme] = await Promise.all([
+      const [storedPrices, storedTheme, storedPixSettings] = await Promise.all([
         readStoredPrices(),
         AsyncStorage.getItem(THEME_STORAGE_KEY),
+        readStoredPixSettings(),
       ]);
 
       setProducts(mapProductsWithPrices(storedPrices));
+      setPixSettings(storedPixSettings);
 
       if (isAppTheme(storedTheme)) {
         setThemeModeState(storedTheme);
@@ -131,6 +181,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn("Nao foi possivel carregar as configuracoes.", error);
       setProducts(DEFAULT_PRODUCTS);
+      setPixSettings(DEFAULT_PIX_SETTINGS);
       setThemeModeState("light");
     } finally {
       setSettingsLoading(false);
@@ -150,6 +201,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       JSON.stringify(normalizedPrices)
     );
     setProducts(nextProducts);
+  }, []);
+
+  const savePixSettings = useCallback(async (settings: PixSettings) => {
+    const normalizedSettings = normalizePixSettings(settings);
+
+    await AsyncStorage.setItem(
+      PIX_STORAGE_KEY,
+      JSON.stringify(normalizedSettings)
+    );
+    setPixSettings(normalizedSettings);
   }, []);
 
   const updateProductPrice = useCallback(
@@ -187,19 +248,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const contextValue = useMemo<SettingsContextValue>(
     () => ({
       products,
+      pixSettings,
       themeMode,
       colors: Colors[themeMode],
       settingsLoading,
       saveProductPrices,
+      savePixSettings,
       updateProductPrice,
       setThemeMode,
       loadSettings,
     }),
     [
       products,
+      pixSettings,
       themeMode,
       settingsLoading,
       saveProductPrices,
+      savePixSettings,
       updateProductPrice,
       setThemeMode,
       loadSettings,
