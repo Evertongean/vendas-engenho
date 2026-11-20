@@ -54,3 +54,6 @@ pnpm-debug.*
 Thumbs.db
 .idea/
 .vscode/
+
+# Arquivos preparados para publicacao manual na Wiki
+wike-organizar/
